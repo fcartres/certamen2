@@ -1,0 +1,29 @@
+{
+	"name": "base-ev1-lenguaje-de-programacion-web",
+	"version": "0.1.0",
+	"description": "Base para el trabajo de la Ev1 Lenguaje de Programación WEB",
+	"license": "MIT",
+	"author": "Gustavo Alfredo Marín Sáez",
+	"type": "module",
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js",
+		"dev": "node --watch index.js",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"seed": "node prisma/seed.js"
+	},
+	"dependencies": {
+		"@prisma/client": "^6.7.0",
+		"express": "^5.1.0",
+		"prisma": "^6.7.0",
+		"valibot": "^1.1.0"
+	},
+	"prisma": {
+		"seed": "node prisma/seed.js"
+	},
+	"devDependencies": {
+		"@vitest/ui": "^3.1.3",
+		"supertest": "^7.1.1",
+		"vitest": "^3.1.3"
+	}
+}
