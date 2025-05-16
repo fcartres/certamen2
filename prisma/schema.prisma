@@ -1,0 +1,33 @@
+// Configuración del generador del cliente Prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Configuración de la base de datos
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Modelo de Usuario
+model User {
+  id        String      @id @default(uuid())    // ID único autogenerado
+  username  String      @unique                 // Nombre de usuario único
+  name      String                             // Nombre completo
+  password  String                             // Contraseña hasheada
+  token     String?                            // Token de autenticación (opcional)
+  reminders Reminder[]                         // Relación con recordatorios
+  createdAt DateTime    @default(now())        // Fecha de creación
+  updatedAt DateTime    @updatedAt             // Fecha de actualización
+}
+
+// Modelo de Recordatorio
+model Reminder {
+  id        String   @id @default(uuid())      // ID único autogenerado
+  content   String                             // Contenido del recordatorio
+  important Boolean  @default(false)           // Indicador de importancia
+  createdAt DateTime @default(now())           // Fecha de creación
+  updatedAt DateTime @updatedAt                // Fecha de actualización
+  userId    String                             // ID del usuario relacionado
+  user      User     @relation(fields: [userId], references: [id])  // Relación con usuario
+}

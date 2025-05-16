@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordatorios</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f0f2f5;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #1a73e8;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"], 
+        input[type="password"] {
+            width: 200px;
+            padding: 8px;
+            margin: 5px auto;
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        .reminder {
+            padding: 10px;
+            margin: 8px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .important {
+            border-left: 3px solid #e94235;
+            background-color: #fff8f8;
+        }
+
+        .checkbox-container {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-section" class="section">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Usuario">
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="login()">Entrar</button>
+        <div class="form-footer">
+            <p>¿No estás registrado? <a href="register.html">Regístrate aquí</a></p>
+        </div>
+    </div>
+
+    <!-- Add this to the reminder-section div, right at the beginning -->
+    <div id="reminder-section" class="hidden">
+        <div class="section">
+            <div class="user-info">
+                <span>Bienvenido, <strong id="userDisplay"></strong></span>
+                <button id="logoutBtn" style="float:right; margin-left:10px; background:#dc3545;" onclick="logout()">Logout</button>
+            </div>
+            <h2>Nuevo Recordatorio</h2>
+            <input type="text" id="content" placeholder="Escribe aquí">
+            <div class="checkbox-container">
+                <input type="checkbox" id="important">
+                <label for="important">Importante</label>
+            </div>
+            <button onclick="createReminder()">Guardar</button>
+        </div>
+
+        <div class="section">
+            <h2>Recordatorios</h2>
+            <div id="reminders-list"></div>
+        </div>
+    </div>
+
+    <!-- Add this to your existing style section -->
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+    
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 300px;
+            border-radius: 8px;
+            position: relative;
+        }
+    
+        .close {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    
+        /* Add these styles in the first style section */
+        .edit-btn, .delete-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            min-width: 70px;
+            margin: 0 2px;
+        }
+
+        .edit-btn {
+            background-color: #1a73e8;
+        }
+
+        .edit-btn:hover {
+            background-color: #1557b0;
+        }
+
+        .reminder-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+    
+    <!-- Add this before the closing body tag -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Editar Recordatorio</h2>
+            <input type="text" id="editContent">
+            <div class="checkbox-container">
+                <input type="checkbox" id="editImportant">
+                <label for="editImportant">Importante</label>
+            </div>
+            <button onclick="saveEdit()">Guardar</button>
+        </div>
+    </div>
+
+    <!-- Update your JavaScript section -->
+    <script>
+        let currentEditId = null;
+    
+        function openModal(id, content, important) {
+            currentEditId = id;
+            document.getElementById('editContent').value = content;
+            document.getElementById('editImportant').checked = important;
+            document.getElementById('editModal').style.display = 'block';
+        }
+    
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditId = null;
+        }
+    
+        async function saveEdit() {
+            const content = document.getElementById('editContent').value.trim();
+            const important = document.getElementById('editImportant').checked;
+    
+            // Validar que el contenido no esté vacío
+            if (!content) {
+                alert('El recordatorio no puede estar vacío');
+                return;
+            }
+    
+            try {
+                const response = await fetch(`/api/reminders/${currentEditId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Authorization': authToken
+                    },
+                    body: JSON.stringify({ content, important })
+                });
+    
+                if (response.ok) {
+                    closeModal();
+                    loadReminders();
+                } else {
+                    alert('Error al actualizar');
+                }
+            } catch (error) {
+                alert('Error al actualizar');
+            }
+        }
+    
+        // Update your loadReminders function to use the modal
+        async function loadReminders() {
+            try {
+                const response = await fetch('/api/reminders', {
+                    headers: { 'X-Authorization': authToken }
+                });
+    
+                const reminders = await response.json();
+                const container = document.getElementById('reminders-list');
+                container.innerHTML = '';
+    
+                reminders.forEach(reminder => {
+                    const div = document.createElement('div');
+                    div.className = `reminder ${reminder.important ? 'important' : ''}`;
+                    div.innerHTML = `
+                        <span>${reminder.content}</span>
+                        <div class="reminder-buttons">
+                            <button class="edit-btn" onclick="openModal('${reminder.id}', '${reminder.content}', ${reminder.important})">Editar</button>
+                            <button class="delete-btn" onclick="deleteReminder('${reminder.id}')">Borrar</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                alert('Error al cargar');
+            }
+        }
+    
+        let authToken = '';
+    
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+    
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+    
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    document.getElementById('userDisplay').textContent = data.name;
+                    document.getElementById('login-section').classList.add('hidden');
+                    document.getElementById('reminder-section').classList.remove('hidden');
+                    loadReminders();
+                } else {
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    alert(`Error ${response.status}: Usuario o contraseña incorrectos.\nCódigo de error: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                alert(`Error de conexión: ${error.message}\nCódigo: ${error.code || 'desconocido'}`);
+            }
+        }
+
+        async function deleteReminder(id) {
+            const confirmDelete = confirm('¿Estás seguro de que quieres borrar este recordatorio?');
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`/api/reminders/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Authorization': authToken
+                    }
+                });
+
+                if (response.ok) {
+                    loadReminders();
+                } else {
+                    const data = await response.json();
+                    alert(`Error al borrar el recordatorio.\nCódigo de error: ${response.status}\nDetalle: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                alert(`Error al borrar el recordatorio.\nCódigo: ${error.code || 'desconocido'}\nDetalle: ${error.message}`);
+            }
+        }
+
+        async function createReminder() {
+            const content = document.getElementById('content').value.trim();
+            const important = document.getElementById('important').checked;
+    
+            // Validar que el contenido no esté vacío
+            if (!content) {
+                alert('El recordatorio no puede estar vacío');
+                return;
+            }
+    
+            try {
+                const response = await fetch('/api/reminders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Authorization': authToken
+                    },
+                    body: JSON.stringify({ content, important })
+                });
+    
+                if (response.ok) {
+                    document.getElementById('content').value = '';
+                    document.getElementById('important').checked = false;
+                    loadReminders();
+                }
+            } catch (error) {
+                alert('Error al crear');
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'X-Authorization': authToken
+                    }
+                });
+    
+                if (response.ok) {
+                    // Limpiar el token
+                    authToken = '';
+                    // Limpiar el nombre de usuario mostrado
+                    document.getElementById('userDisplay').textContent = '';
+                    // Mostrar sección de login y ocultar sección de recordatorios
+                    document.getElementById('login-section').classList.remove('hidden');
+                    document.getElementById('reminder-section').classList.add('hidden');
+                    // Limpiar los campos del formulario de login
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                    // Eliminar la llamada a loadReminders() ya que no es necesaria
+                } else {
+                    alert('Error al cerrar sesión');
+                }
+            } catch (error) {
+                alert('Error al cerrar sesión');
+            }
+        }
+    </script>
+</body>
+</html>
